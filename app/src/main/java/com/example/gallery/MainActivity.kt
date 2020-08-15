@@ -2,11 +2,10 @@ package com.example.gallery
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import com.example.gallery.photo.PhotosFragment
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
-
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,5 +24,15 @@ class MainActivity : AppCompatActivity() {
                 }else -> false
             }
         }
+
+        //check open app
+        if (savedInstanceState == null){
+            val photosFragment = PhotosFragment()
+            supportFragmentManager.beginTransaction().replace(R.id.flContainer,photosFragment,photosFragment.javaClass.simpleName).commit()
+        }
+
+
     }
+
+
 }
