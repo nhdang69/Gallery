@@ -1,8 +1,11 @@
 package com.example.gallery.utils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.DisplayMetrics
 import androidx.fragment.app.Fragment
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.math.roundToInt
 
 
@@ -26,4 +29,10 @@ fun convertDpToPixel(dp: Int, context: Context?) : Int{
     } else {
         return dp
     }
+}
+
+@SuppressLint("SimpleDateFormat")
+fun Long.getDate(): String {
+    val currentTime = this * 1000L
+    return SimpleDateFormat("dd/MM/yyyy").format(Date(currentTime))
 }

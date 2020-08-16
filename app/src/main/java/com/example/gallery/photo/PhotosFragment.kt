@@ -12,8 +12,10 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.gallery.R
 import com.example.gallery.model.Image
+import com.example.gallery.utils.getDate
 import com.example.gallery.utils.getWidthHeightDevice
 import kotlinx.android.synthetic.main.fragment_photos.*
 import java.util.*
@@ -99,7 +101,8 @@ class PhotosFragment : Fragment() {
                 MediaStore.Images.ImageColumns.DESCRIPTION
             )
 
-            val sortOrder = "${MediaStore.Images.ImageColumns.DISPLAY_NAME} ASC"
+            val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+
 
             val query = context!!.contentResolver!!.query(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
@@ -125,7 +128,7 @@ class PhotosFragment : Fragment() {
                     while (cursor.moveToNext()) {
                         // Get values of columns for a given video.
                         val displayNameCur = cursor.getString(displayName)
-                        val dateAddedCur = cursor.getString(dateAdded)
+                        val dateAddedCur = cursor.getLong(dateAdded)
                         val dateModifiedCur = cursor.getString(dateModified)
                         var descriptionCur = cursor.getString(description)
                         val id = cursor.getLong(fieldIndex)
@@ -135,10 +138,11 @@ class PhotosFragment : Fragment() {
                         val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
                         // Stores column values and the contentUri in a local object
                         // that represents the media file.
+                        val dateAddedStr = dateAddedCur.getDate()
                         images = images + Image(
                             imageUri,
                             displayNameCur,
-                            dateAddedCur,
+                            dateAddedStr,
                             dateModifiedCur,
                             descriptionCur
                         )
@@ -147,9 +151,12 @@ class PhotosFragment : Fragment() {
             }
 
             if (images.isNotEmpty()){
-                rcvImages.layoutManager = GridLayoutManager(context,4,GridLayoutManager.VERTICAL,false)
+                val imagesGroupBy = images.groupBy { it.dateAdded }
+                rcvImages.layoutManager = LinearLayoutManager(context,LinearLayoutManager.VERTICAL,false)
                 rcvImages.setHasFixedSize(true)
-                rcvImages.adapter = PhotoAdapter(context!!,images,this.getWidthHeightDevice())
+                rcvImages.adapter = PhotoAdapter(context!!,imagesGroupBy,this.getWidthHeightDevice())
+
+
             }
         }
     }
