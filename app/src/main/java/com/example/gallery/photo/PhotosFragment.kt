@@ -11,20 +11,22 @@ import android.view.ViewGroup
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.gallery.R
 import com.example.gallery.model.Image
+import com.example.gallery.model.Media
+import com.example.gallery.model.Video
 import com.example.gallery.utils.getDate
 import com.example.gallery.utils.getWidthHeightDevice
 import kotlinx.android.synthetic.main.fragment_photos.*
+import kotlinx.coroutines.*
 import java.util.*
 
 
 class PhotosFragment : Fragment() {
 
     private val permissionsRequestCode = 101
-    private var images: List<Image> = ArrayList()
+    private var data: List<Media> = ArrayList()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,7 +57,7 @@ class PhotosFragment : Fragment() {
             val isRequest = checkRequestPermission()
             if (isRequest != null) {
                 if (isRequest) {
-                    getImageFromDevice()
+                    getDataFromDevice()
                 } else {
                     requestPermission()
                 }
@@ -82,7 +84,7 @@ class PhotosFragment : Fragment() {
         when (requestCode) {
             permissionsRequestCode -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    getImageFromDevice()
+                    getDataFromDevice()
                 } else {
                     requestPermission()
                 }
@@ -91,8 +93,30 @@ class PhotosFragment : Fragment() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
+    private fun getDataFromDevice() = runBlocking {
+
+        val deferrals = listOf(async {
+            getImageFromDevice()
+        },async {
+            getVideoFromDevice()
+        })
+
+        deferrals.awaitAll()
+
+        if (data.isNotEmpty()) {
+            val dataGroupBy = data.groupBy {
+                it.dateAdded
+            }
+            rcvImages.layoutManager =
+                LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+            rcvImages.setHasFixedSize(true)
+            rcvImages.adapter =
+                PhotoAdapter(context!!, dataGroupBy, this@PhotosFragment.getWidthHeightDevice())
+        }
+    }
+
     private fun getImageFromDevice() {
-        if (context!=null){
+        context?.let {
             val projection = arrayOf(
                 MediaStore.Images.ImageColumns._ID,
                 MediaStore.Images.ImageColumns.DISPLAY_NAME,
@@ -135,11 +159,14 @@ class PhotosFragment : Fragment() {
                         if (descriptionCur == null) {
                             descriptionCur = ""
                         }
-                        val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+                        val imageUri = ContentUris.withAppendedId(
+                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                            id
+                        )
                         // Stores column values and the contentUri in a local object
                         // that represents the media file.
                         val dateAddedStr = dateAddedCur.getDate()
-                        images = images + Image(
+                        data = data + Image(
                             imageUri,
                             displayNameCur,
                             dateAddedStr,
@@ -149,15 +176,71 @@ class PhotosFragment : Fragment() {
                     }
                 }
             }
+        }
+    }
 
-            if (images.isNotEmpty()){
-                val imagesGroupBy = images.groupBy { it.dateAdded }
-                rcvImages.layoutManager = LinearLayoutManager(context,LinearLayoutManager.VERTICAL,false)
-                rcvImages.setHasFixedSize(true)
-                rcvImages.adapter = PhotoAdapter(context!!,imagesGroupBy,this.getWidthHeightDevice())
+    private fun getVideoFromDevice() {
+        context?.let {
+            val projection = arrayOf(
+                MediaStore.Video.VideoColumns._ID,
+                MediaStore.Video.VideoColumns.DISPLAY_NAME,
+                MediaStore.Video.VideoColumns.DATE_ADDED,
+                MediaStore.Video.VideoColumns.DATE_MODIFIED,
+                MediaStore.Video.VideoColumns.DESCRIPTION
+            )
+
+            val sortOrder = "${MediaStore.Video.VideoColumns.DATE_ADDED} DESC"
 
 
+            val query = context!!.contentResolver!!.query(
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                null,
+                null,
+                sortOrder
+            )
+
+            query.use { cursor ->
+                // Cache column indices.
+                if (cursor != null) {
+                    val displayName =
+                        cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.DISPLAY_NAME)
+                    val dateAdded =
+                        cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.DATE_ADDED)
+                    val dateModified =
+                        cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.DATE_MODIFIED)
+                    val description =
+                        cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.DESCRIPTION)
+                    val fieldIndex = cursor.getColumnIndex(MediaStore.Video.VideoColumns._ID)
+
+                    while (cursor.moveToNext()) {
+                        // Get values of columns for a given video.
+                        val displayNameCur = cursor.getString(displayName)
+                        val dateAddedCur = cursor.getLong(dateAdded)
+                        val dateModifiedCur = cursor.getString(dateModified)
+                        var descriptionCur = cursor.getString(description)
+                        val id = cursor.getLong(fieldIndex)
+                        if (descriptionCur == null) {
+                            descriptionCur = ""
+                        }
+                        val uriVideo = ContentUris.withAppendedId(
+                            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                            id
+                        )
+                        // Stores column values and the contentUri in a local object
+                        // that represents the media file.
+                        val dateAddedStr = dateAddedCur.getDate()
+                        data = data + Video(
+                            uriVideo,
+                            displayNameCur,
+                            dateAddedStr,
+                            dateModifiedCur,
+                            descriptionCur
+                        )
+                    }
+                }
             }
         }
+
     }
 }

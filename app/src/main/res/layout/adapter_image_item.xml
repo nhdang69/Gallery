@@ -15,4 +15,16 @@
         android:contentDescription="@string/app_name"
         android:adjustViewBounds="true"
         />
+    <TextView
+        android:id="@+id/tvVideo"
+        app:layout_constraintTop_toTopOf="@id/imgPhoto"
+        app:layout_constraintStart_toStartOf="@id/imgPhoto"
+        app:layout_constraintEnd_toEndOf="@id/imgPhoto"
+        app:layout_constraintBottom_toBottomOf="@id/imgPhoto"
+        android:text="video"
+        android:textColor="#ffffff"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
+    </TextView>
 </androidx.constraintlayout.widget.ConstraintLayout>

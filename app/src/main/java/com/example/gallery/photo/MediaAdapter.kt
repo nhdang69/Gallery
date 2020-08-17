@@ -6,27 +6,30 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.gallery.R
 import com.example.gallery.model.Image
+import com.example.gallery.model.Media
+import com.example.gallery.model.Video
 import com.example.gallery.utils.convertDpToPixel
 
-class ImageAdapter(
+class MediaAdapter(
     private val context: Context,
-    private val images: List<Image>,
+    private val images: List<Media>,
     private val widthHeightDevice: IntArray
-) : RecyclerView.Adapter<ImageAdapter.PhotoViewHolder>() {
+) : RecyclerView.Adapter<MediaAdapter.PhotoViewHolder>() {
 
     class PhotoViewHolder(itemView : View) : RecyclerView.ViewHolder(itemView){
 
         private val imgPhoto : ImageView = itemView.findViewById(R.id.imgPhoto)
-
+        private val tvVideo : TextView = itemView.findViewById(R.id.tvVideo)
         fun loadData(
             context: Context,
-            image: Image,
+            media: Media,
             widthHeightDevice: IntArray,
             position: Int
         ) {
@@ -52,7 +55,14 @@ class ImageAdapter(
             }
             imgPhoto.layoutParams = layoutParams
             val requestBuilder = RequestOptions().centerCrop().override(width,width)
-            Glide.with(context).load(image.uriImage).apply(requestBuilder).into(imgPhoto)
+            tvVideo.visibility = View.GONE
+            if (media is Image){
+                Glide.with(context).load(media.uriImage).apply(requestBuilder).into(imgPhoto)
+            }else if (media is Video){
+                tvVideo.visibility = View.VISIBLE
+                Glide.with(context).load(media.uriVideo).apply(requestBuilder).into(imgPhoto)
+            }
+
         }
     }
 
