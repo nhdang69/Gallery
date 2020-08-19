@@ -1,10 +1,14 @@
 package com.example.gallery.photo
 
+import android.app.Activity
+import android.app.ActivityOptions
 import android.content.ContentUris
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Pair
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +16,7 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.gallery.PhotoDetail
 import com.example.gallery.R
 import com.example.gallery.model.Image
 import com.example.gallery.model.Media
@@ -23,7 +28,7 @@ import kotlinx.coroutines.*
 import java.util.*
 
 
-class PhotosFragment : Fragment() {
+class PhotosFragment : Fragment(), MediaAdapter.MediaListener {
 
     private val permissionsRequestCode = 101
     private var data: List<Media> = ArrayList()
@@ -97,7 +102,7 @@ class PhotosFragment : Fragment() {
 
         val deferrals = listOf(async {
             getImageFromDevice()
-        },async {
+        }, async {
             getVideoFromDevice()
         })
 
@@ -111,7 +116,12 @@ class PhotosFragment : Fragment() {
                 LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
             rcvImages.setHasFixedSize(true)
             rcvImages.adapter =
-                PhotoAdapter(context!!, dataGroupBy, this@PhotosFragment.getWidthHeightDevice())
+                PhotoAdapter(
+                    context!!,
+                    dataGroupBy,
+                    this@PhotosFragment.getWidthHeightDevice(),
+                    this@PhotosFragment
+                )
         }
     }
 
@@ -128,7 +138,7 @@ class PhotosFragment : Fragment() {
             val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
 
 
-            val query = context!!.contentResolver!!.query(
+            val queryExternal = context!!.contentResolver!!.query(
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 projection,
                 null,
@@ -136,7 +146,15 @@ class PhotosFragment : Fragment() {
                 sortOrder
             )
 
-            query.use { cursor ->
+            val queryInternal = context!!.contentResolver!!.query(
+                MediaStore.Images.Media.INTERNAL_CONTENT_URI,
+                projection,
+                null,
+                null,
+                sortOrder
+            )
+
+            queryInternal.use { cursor ->
                 // Cache column indices.
                 if (cursor != null) {
                     val displayName =
@@ -160,6 +178,47 @@ class PhotosFragment : Fragment() {
                             descriptionCur = ""
                         }
                         val imageUri = ContentUris.withAppendedId(
+                            MediaStore.Images.Media.INTERNAL_CONTENT_URI,
+                            id
+                        )
+                        // Stores column values and the contentUri in a local object
+                        // that represents the media file.
+                        val dateAddedStr = dateAddedCur.getDate()
+                        data = data + Image(
+                            imageUri,
+                            displayNameCur,
+                            dateAddedStr,
+                            dateModifiedCur,
+                            descriptionCur
+                        )
+                    }
+                }
+            }
+
+            queryExternal.use { cursorEx ->
+                // Cache column indices.
+                if (cursorEx != null) {
+                    val displayName =
+                        cursorEx.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DISPLAY_NAME)
+                    val dateAdded =
+                        cursorEx.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DATE_ADDED)
+                    val dateModified =
+                        cursorEx.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DATE_MODIFIED)
+                    val description =
+                        cursorEx.getColumnIndexOrThrow(MediaStore.Images.ImageColumns.DESCRIPTION)
+                    val fieldIndex = cursorEx.getColumnIndex(MediaStore.Images.ImageColumns._ID)
+
+                    while (cursorEx.moveToNext()) {
+                        // Get values of columns for a given video.
+                        val displayNameCur = cursorEx.getString(displayName)
+                        val dateAddedCur = cursorEx.getLong(dateAdded)
+                        val dateModifiedCur = cursorEx.getString(dateModified)
+                        var descriptionCur = cursorEx.getString(description)
+                        val id = cursorEx.getLong(fieldIndex)
+                        if (descriptionCur == null) {
+                            descriptionCur = ""
+                        }
+                        val imageUri = ContentUris.withAppendedId(
                             MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                             id
                         )
@@ -178,6 +237,7 @@ class PhotosFragment : Fragment() {
             }
         }
     }
+
 
     private fun getVideoFromDevice() {
         context?.let {
@@ -199,6 +259,55 @@ class PhotosFragment : Fragment() {
                 null,
                 sortOrder
             )
+
+            val queryInternal = context!!.contentResolver!!.query(
+                MediaStore.Video.Media.INTERNAL_CONTENT_URI,
+                projection,
+                null,
+                null,
+                sortOrder
+            )
+
+            queryInternal.use { cursor ->
+                // Cache column indices.
+                if (cursor != null) {
+                    val displayName =
+                        cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.DISPLAY_NAME)
+                    val dateAdded =
+                        cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.DATE_ADDED)
+                    val dateModified =
+                        cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.DATE_MODIFIED)
+                    val description =
+                        cursor.getColumnIndexOrThrow(MediaStore.Video.VideoColumns.DESCRIPTION)
+                    val fieldIndex = cursor.getColumnIndex(MediaStore.Video.VideoColumns._ID)
+
+                    while (cursor.moveToNext()) {
+                        // Get values of columns for a given video.
+                        val displayNameCur = cursor.getString(displayName)
+                        val dateAddedCur = cursor.getLong(dateAdded)
+                        val dateModifiedCur = cursor.getString(dateModified)
+                        var descriptionCur = cursor.getString(description)
+                        val id = cursor.getLong(fieldIndex)
+                        if (descriptionCur == null) {
+                            descriptionCur = ""
+                        }
+                        val uriVideo = ContentUris.withAppendedId(
+                            MediaStore.Video.Media.INTERNAL_CONTENT_URI,
+                            id
+                        )
+                        // Stores column values and the contentUri in a local object
+                        // that represents the media file.
+                        val dateAddedStr = dateAddedCur.getDate()
+                        data = data + Video(
+                            uriVideo,
+                            displayNameCur,
+                            dateAddedStr,
+                            dateModifiedCur,
+                            descriptionCur
+                        )
+                    }
+                }
+            }
 
             query.use { cursor ->
                 // Cache column indices.
@@ -241,6 +350,19 @@ class PhotosFragment : Fragment() {
                 }
             }
         }
+    }
 
+    override fun onClick(itemView: View, media: Media) {
+        val intent = Intent(context, PhotoDetail::class.java)
+        intent.putExtra("media", media)
+        val p1 = Pair.create<View, String>(itemView, "imgPhoto")
+        val activityOptions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            ActivityOptions.makeSceneTransitionAnimation(context as Activity, p1)
+        } else {
+            null
+        }
+        if (activityOptions != null) {
+            startActivity(intent, activityOptions.toBundle())
+        } else startActivity(intent)
     }
 }

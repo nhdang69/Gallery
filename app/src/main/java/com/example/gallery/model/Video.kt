@@ -2,10 +2,12 @@ package com.example.gallery.model
 
 import android.net.Uri
 
+
 data class Video (
-    var uriVideo: Uri,
-    override val displayName: String = "",
-    override val dateAdded: String = "",
-    override val dateModified: String = "",
-    override val description: String = ""
-) : Media(displayName,dateAdded,dateModified,description)
+    override var uri: Uri?,
+    override var displayName: String = "",
+    override var dateAdded: String = "",
+    override var dateModified: String = "",
+    override var description: String = ""
+) : Media(uri,displayName,dateAdded,dateModified,description) {
+}

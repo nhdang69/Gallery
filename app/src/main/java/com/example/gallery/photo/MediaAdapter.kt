@@ -12,7 +12,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.gallery.R
-import com.example.gallery.model.Image
 import com.example.gallery.model.Media
 import com.example.gallery.model.Video
 import com.example.gallery.utils.convertDpToPixel
@@ -20,54 +19,61 @@ import com.example.gallery.utils.convertDpToPixel
 class MediaAdapter(
     private val context: Context,
     private val images: List<Media>,
-    private val widthHeightDevice: IntArray
+    private val widthHeightDevice: IntArray,
+    private val mediaListener: MediaListener
 ) : RecyclerView.Adapter<MediaAdapter.PhotoViewHolder>() {
 
-    class PhotoViewHolder(itemView : View) : RecyclerView.ViewHolder(itemView){
+    class PhotoViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
-        private val imgPhoto : ImageView = itemView.findViewById(R.id.imgPhoto)
-        private val tvVideo : TextView = itemView.findViewById(R.id.tvVideo)
+        private val imgPhoto: ImageView = itemView.findViewById(R.id.imgPhoto)
+        private val tvVideo: TextView = itemView.findViewById(R.id.tvVideo)
+
         fun loadData(
             context: Context,
             media: Media,
             widthHeightDevice: IntArray,
-            position: Int
+            position: Int,
+            mediaListener: MediaListener
         ) {
-            val width = (widthHeightDevice[0] - convertDpToPixel(12,context)) / 4
+            val width = (widthHeightDevice[0] - convertDpToPixel(12, context)) / 4
 
-            val layoutParams : ConstraintLayout.LayoutParams = imgPhoto.layoutParams as ConstraintLayout.LayoutParams
+            val layoutParams: ConstraintLayout.LayoutParams =
+                imgPhoto.layoutParams as ConstraintLayout.LayoutParams
             layoutParams.height = width
-            layoutParams.topMargin = convertDpToPixel(4,context)
-            if(position % 4 == 1){
+            layoutParams.topMargin = convertDpToPixel(4, context)
+            if (position % 4 == 1) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    layoutParams.marginStart = convertDpToPixel(4,context)
-                    layoutParams.marginEnd = convertDpToPixel(4,context)
+                    layoutParams.marginStart = convertDpToPixel(4, context)
+                    layoutParams.marginEnd = convertDpToPixel(4, context)
                 }
-            }else if (position % 4 == 2){
+            } else if (position % 4 == 2) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    layoutParams.marginEnd = convertDpToPixel(4,context)
+                    layoutParams.marginEnd = convertDpToPixel(4, context)
                 }
-            }else{
+            } else {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
                     layoutParams.marginStart = 0
                     layoutParams.marginEnd = 0
                 }
             }
             imgPhoto.layoutParams = layoutParams
-            val requestBuilder = RequestOptions().centerCrop().override(width,width)
+            val requestBuilder = RequestOptions().centerCrop().override(width, width)
             tvVideo.visibility = View.GONE
-            if (media is Image){
-                Glide.with(context).load(media.uriImage).apply(requestBuilder).into(imgPhoto)
-            }else if (media is Video){
+            Glide.with(context).load(media.uri).apply(requestBuilder).into(imgPhoto)
+            if (media is Video) {
                 tvVideo.visibility = View.VISIBLE
-                Glide.with(context).load(media.uriVideo).apply(requestBuilder).into(imgPhoto)
             }
 
+            itemView.setOnClickListener{
+                mediaListener.onClick(it,media)
+            }
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoViewHolder {
-        return PhotoViewHolder(LayoutInflater.from(context).inflate(R.layout.adapter_image_item,parent,false))
+        return PhotoViewHolder(
+            LayoutInflater.from(context).inflate(R.layout.adapter_image_item, parent, false)
+        )
     }
 
     override fun getItemCount(): Int {
@@ -75,6 +81,10 @@ class MediaAdapter(
     }
 
     override fun onBindViewHolder(holder: PhotoViewHolder, position: Int) {
-        holder.loadData(context,images[position],widthHeightDevice,position)
+        holder.loadData(context, images[position], widthHeightDevice, position,mediaListener)
+    }
+
+    interface MediaListener {
+        fun onClick(itemView: View, media: Media)
     }
 }

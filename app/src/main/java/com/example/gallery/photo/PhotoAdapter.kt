@@ -19,7 +19,8 @@ import kotlinx.coroutines.runBlocking
 class PhotoAdapter(
     private val context: Context,
     private val imagesGroupBy: Map<String, List<Media>>,
-    private val widthHeightDevice: IntArray
+    private val widthHeightDevice: IntArray,
+    private val mediaListener: MediaAdapter.MediaListener
 ) : RecyclerView.Adapter<PhotoAdapter.PhotoHolder>() {
 
     class PhotoHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -31,7 +32,8 @@ class PhotoAdapter(
         fun loadData(
             context: Context,
             list: List<Media>?,
-            widthHeightDevice: IntArray
+            widthHeightDevice: IntArray,
+            mediaListener: MediaAdapter.MediaListener
         ) {
             if (list != null && list.isNotEmpty()) {
                 if (list[0] is Image) {
@@ -71,7 +73,7 @@ class PhotoAdapter(
                     GridLayoutManager.VERTICAL, false
                 )
                 rcvImages.setHasFixedSize(true)
-                rcvImages.adapter = MediaAdapter(context, list, widthHeightDevice)
+                rcvImages.adapter = MediaAdapter(context, list, widthHeightDevice, mediaListener)
             }
         }
     }
@@ -90,7 +92,7 @@ class PhotoAdapter(
         holder.loadData(
             context,
             imagesGroupBy[imagesGroupBy.keys.toList()[position]],
-            widthHeightDevice
+            widthHeightDevice, mediaListener
         )
     }
 }
